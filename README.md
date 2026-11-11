@@ -8,8 +8,7 @@ Profesora: Vera Chiodi. Alumnos: César Leonardo Ferrer y Santiago Martínez Sol
 Gran Encuesta Integrada de Hogares (GEIH) 2020, DANE.
 Descarga: microdatos.dane.gov.co → GEIH 2020 → Obtener Microdatos.
 
-Bajar `1.Enero.zip` a `6.Junio.zip` y copiarlos en `data/raw/zips/`.
-Los datos no se suben al repo.
+Los zips originales de enero a junio (`1.Enero.zip` a `6.Junio.zip`) están en `data/raw/zips/`.
 
 ## Cómo correrlo
 
