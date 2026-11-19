@@ -1,10 +1,17 @@
 *==============================================================================
-* 02_bases_variables.do
-* Arma las bases de Q1 (ene-mar) y Q2 (abr-jun) 2020 y construye las variables
-* pedidas por la cátedra.
-* Une, para cada mes: personas + ocupados + otros ingresos (si existe).
+* TP Desarrollo Económico Aplicado - Maestría en Economía Aplicada (UBA)
+* Encuestas de hogares 2020 - Colombia (GEIH, DANE)
+* Alumnos: César Leonardo Ferrer y Santiago Martínez Soler
+* Profesora: Vera Chiodi
 *
-* IMPORTANTE - disponibilidad (ver README):
+* Arma la base de personas del primer (ene-mar) y segundo (abr-jun) trimestre
+* de 2020 y construye las variables pedidas por la cátedra.
+*
+* Insumos: los zips mensuales de la GEIH 2020 del DANE (1.Enero.zip a
+* 6.Junio.zip), en la carpeta $root/zips.
+* Resultado: geih_colombia_2020_q1q2.dta (variable trimestre: 1 = Q1, 2 = Q2).
+*
+* Disponibilidad:
 * - De marzo a junio, en las cabeceras (CLASE==1) se usó un formulario
 *   telefónico reducido. Solo pregunta ingreso del empleo principal, horas,
 *   posición ocupacional y, desde mayo, salud, pensión, tamaño y lugar de
@@ -15,8 +22,41 @@
 *   equivalente en la GEIH 2020: no se construyen.
 *==============================================================================
 
+clear all
+set more off
+version 16
+
+* --- CAMBIAR ESTA RUTA: carpeta con este do-file y la subcarpeta zips --------
+global root "C:/Users/TU_USUARIO/Documents/TP_GEIH_Colombia"
+*------------------------------------------------------------------------------
+
+global zips "$root/zips"
+global raw  "$root/raw"
+cap mkdir "$raw"
+
+*==============================================================================
+* 1. Descomprimir los zips de enero a junio
+*==============================================================================
+local zip01 "1.Enero.zip"
+local zip02 "2.Febrero.zip"
+local zip03 "3.Marzo.zip"
+local zip04 "4.Abril.zip"
+local zip05 "5.Mayo.zip"
+local zip06 "6.Junio.zip"
+
+local dir_actual "`c(pwd)'"
+foreach m in 01 02 03 04 05 06 {
+    cap mkdir "$raw/m`m'"
+    cd "$raw/m`m'"
+    unzipfile "$zips/`zip`m''", replace
+}
+cd "`dir_actual'"
+
+*==============================================================================
+* 2. Bases de Q1 y Q2 y variables
+*==============================================================================
 local usar DIRECTORIO SECUENCIA_P ORDEN HOGAR CLASE AREA DPTO MES FEX_C ///
-    P6040 P6020 P6050 P6090 P6100 P6110 OCI DSI INI PET PETI ///
+    P6040 P6020 P6050 P6090 P6100 P6110 OCI DSI INI PETI ///
     P6430 P6500 P6750 P6760 P550 P6510S1 P6510S2 P6545S1 P6545S2 ///
     P6580S1 P6580S2 P6585S1A1 P6585S1A2 P6585S2A1 P6585S2A2 ///
     P6585S3A1 P6585S3A2 P6585S4A1 P6585S4A2 ///
@@ -136,7 +176,7 @@ gen ing_sec = P7070 if ocu & !form_reducido & P7040 == 1
 replace ing_sec = 0 if ocu & !form_reducido & P7040 == 2
 
 * Total non work income (solo ene-feb): mensuales + últimos 12 meses / 12
-gen ing_nolab = 0 if mes_n <= 2 & PET == 1
+gen ing_nolab = 0 if mes_n <= 2 & PETI == 1
 foreach v in P7500S1A1 P7500S2A1 P7500S3A1 {
     replace ing_nolab = ing_nolab + `v' if !missing(ing_nolab, `v')
 }
@@ -284,11 +324,52 @@ local vars ing_hogar ing_pc dec_ing dec_ingpc hrs_ppal hrs_sec ing_ind ing_sec /
 *------------------------------------------------------------------------------
 tabstat `vars' [aw = FEX_C], by(trimestre) stat(mean n) columns(statistics) format(%12.3f)
 
+keep DIRECTORIO SECUENCIA_P ORDEN HOGAR trimestre mes_n form_reducido ///
+     CLASE AREA DPTO FEX_C P6020 P6040 P6050 OCI DSI INI PETI `vars'
 compress
-order DIRECTORIO SECUENCIA_P ORDEN trimestre mes_n form_reducido `vars'
+order DIRECTORIO SECUENCIA_P ORDEN HOGAR trimestre mes_n form_reducido ///
+      CLASE AREA DPTO FEX_C P6020 P6040 P6050 OCI DSI INI PETI `vars'
+save "$root/geih_colombia_2020_q1q2.dta", replace
+
+*==============================================================================
+* 3. Estructura de panel: ¿se pueden seguir hogares entre meses?
+*    Según la metodología del DANE, la GEIH rota segmentos y no es un panel.
+*    Resultado: 337 DIRECTORIO aparecen en dos meses (marzo-mayo y abril-mayo),
+*    pero no son las mismas personas: el sexo coincide ~50% de las veces, la
+*    edad (0 o 1 año de diferencia) ~3% y el área ~5%.
+*==============================================================================
+use "$root/geih_colombia_2020_q1q2.dta", clear
+
+* 1) hogares (DIRECTORIO) en cuántos meses distintos aparecen
 preserve
-keep if trimestre == 1
-save "$derived/geih_q1_2020_variables.dta", replace
+keep DIRECTORIO mes_n
+duplicates drop
+bysort DIRECTORIO: gen n_meses = _N
+by DIRECTORIO: keep if _n == 1
+tab n_meses
 restore
-keep if trimestre == 2
-save "$derived/geih_q2_2020_variables.dta", replace
+
+* 2) ¿son las mismas personas? cruzar meses y comparar sexo, edad y área
+foreach par in "3 5" "4 5" {
+    local a : word 1 of `par'
+    local b : word 2 of `par'
+
+    preserve
+    keep if mes_n == `b'
+    keep DIRECTORIO SECUENCIA_P ORDEN P6020 P6040 AREA
+    rename (P6020 P6040 AREA) (sexo_b edad_b area_b)
+    tempfile mb
+    save `mb'
+    restore
+
+    preserve
+    keep if mes_n == `a'
+    keep DIRECTORIO SECUENCIA_P ORDEN P6020 P6040 AREA
+    merge 1:1 DIRECTORIO SECUENCIA_P ORDEN using `mb', keep(match) nogen
+    di as result _n "Mes `a' vs mes `b': " _N " personas con el mismo identificador"
+    gen mismo_sexo = P6020 == sexo_b
+    gen edad_ok    = inlist(edad_b - P6040, 0, 1)
+    gen misma_area = AREA == area_b
+    sum mismo_sexo edad_ok misma_area
+    restore
+}

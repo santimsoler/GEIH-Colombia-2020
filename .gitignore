@@ -1,7 +1,4 @@
-data/raw/m*/
-data/derived/*
-!data/derived/.gitkeep
-*.dta
+raw/
 *.log
 *.smcl
 .DS_Store
