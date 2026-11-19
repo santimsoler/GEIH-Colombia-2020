@@ -1,6 +1,7 @@
 *==============================================================================
-* 05_variables.do
-* Construye las variables pedidas por la cátedra (lista de 37) para Q1 y Q2 2020.
+* 02_bases_variables.do
+* Arma las bases de Q1 (ene-mar) y Q2 (abr-jun) 2020 y construye las variables
+* pedidas por la cátedra.
 * Une, para cada mes: personas + ocupados + otros ingresos (si existe).
 *
 * IMPORTANTE - disponibilidad (ver README):

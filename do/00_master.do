@@ -11,21 +11,17 @@ clear all
 set more off
 version 16
 
-* --- CAMBIAR ESTA RUTA a la carpeta donde clonaste el repo -------------------
+* --- CAMBIAR ESTA RUTA a la carpeta donde está el repo -----------------------
 global root "C:/Users/TU_USUARIO/Documents/GEIH-Colombia-2020"
 *------------------------------------------------------------------------------
 
 global do      "$root/do"
-global zips    "$root/data/raw/zips"     // acá van los 6 zips del DANE (1.Enero.zip ... 6.Junio.zip)
+global zips    "$root/data/raw/zips"
 global raw     "$root/data/raw"
 global derived "$root/data/derived"
-global output  "$root/output"
 
 cap mkdir "$derived"
-cap mkdir "$output"
 
 do "$do/01_descomprimir.do"
-do "$do/02_armar_trimestres.do"
-do "$do/03_validar_y_tasas.do"
-do "$do/04_panel.do"
-do "$do/05_variables.do"
+do "$do/02_bases_variables.do"
+do "$do/03_panel.do"
