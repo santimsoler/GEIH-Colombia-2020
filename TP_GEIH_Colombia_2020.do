@@ -26,7 +26,7 @@ clear all
 set more off
 version 16
 
-* --- CAMBIAR ESTA RUTA: carpeta con este do-file y la subcarpeta zips --------
+* --- CAMBIAR ESTA RUTA: carpeta con la subcarpeta zips -----------------------
 global root "C:/Users/TU_USUARIO/Documents/TP_GEIH_Colombia"
 *------------------------------------------------------------------------------
 
@@ -35,7 +35,7 @@ global raw  "$root/raw"
 cap mkdir "$raw"
 
 *==============================================================================
-* 1. Descomprimir los zips de enero a junio
+* 1. Descomprimir los zips de enero a junio (con tar, incluido en Windows 10/11)
 *==============================================================================
 local zip01 "1.Enero.zip"
 local zip02 "2.Febrero.zip"
@@ -44,13 +44,16 @@ local zip04 "4.Abril.zip"
 local zip05 "5.Mayo.zip"
 local zip06 "6.Junio.zip"
 
-local dir_actual "`c(pwd)'"
 foreach m in 01 02 03 04 05 06 {
     cap mkdir "$raw/m`m'"
-    cd "$raw/m`m'"
-    unzipfile "$zips/`zip`m''", replace
+    shell tar -xf "$zips/`zip`m''" -C "$raw/m`m'"
+    local sub : dir "$raw/m`m'" dirs "*"
+    if `"`sub'"' == "" {
+        di as error "No se pudo descomprimir `zip`m''"
+        exit 601
+    }
+    di as result "Mes `m' descomprimido"
 }
-cd "`dir_actual'"
 
 *==============================================================================
 * 2. Bases de Q1 y Q2 y variables
