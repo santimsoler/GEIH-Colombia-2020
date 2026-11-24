@@ -13,25 +13,25 @@
 *
 * Disponibilidad:
 * - De marzo a junio, en las cabeceras (CLASE==1) se usó un formulario
-*   telefónico reducido. Solo pregunta ingreso del empleo principal, horas,
-*   posición ocupacional y, desde mayo, salud, pensión, tamaño y lugar de
-*   trabajo. El resto (rural) siguió con el formulario completo.
+* telefónico reducido. Solo pregunta ingreso del empleo principal, horas,
+* posición ocupacional y, desde mayo, salud, pensión, tamaño y lugar de
+* trabajo. El resto (rural) siguió con el formulario completo.
 * - La tabla "Otros ingresos" solo está en enero y febrero. Por eso el ingreso
-*   total individual y del hogar (y sus deciles) solo existen en ene-feb.
+* total individual y del hogar (y sus deciles) solo existen en ene-feb.
 * - "Sick leave days" y "Formal receipt for payment" no tienen pregunta
-*   equivalente en la GEIH 2020: no se construyen.
+* equivalente en la GEIH 2020: no se construyen.
 *==============================================================================
 
 clear all
 set more off
 version 16
 
-* --- CAMBIAR ESTA RUTA: carpeta con la subcarpeta zips -----------------------
-global root "C:/Users/TU_USUARIO/Documents/TP_GEIH_Colombia"
+* --- Carpeta con la subcarpeta zips -------------------------------------------
+global root "C:/Users/FARAH MOHALEM/Documents/MAESTRIA/geih_colombia_2020_q1q2"
 *------------------------------------------------------------------------------
 
 global zips "$root/zips"
-global raw  "$root/raw"
+global raw "$root/raw"
 cap mkdir "$raw"
 
 *==============================================================================
@@ -131,14 +131,14 @@ foreach v of local usar {
 *------------------------------------------------------------------------------
 * Auxiliares
 *------------------------------------------------------------------------------
-gen trimestre     = cond(mes_n <= 3, 1, 2)
+gen trimestre = cond(mes_n <= 3, 1, 2)
 gen form_reducido = (CLASE == 1 & mes_n >= 3)
-gen ocu   = (OCI == 1)
-gen asal  = ocu & inlist(P6430, 1, 2, 3, 8)
+gen ocu = (OCI == 1)
+gen asal = ocu & inlist(P6430, 1, 2, 3, 8)
 gen indep = ocu & inlist(P6430, 4, 5, 9)
-gen miembro = !inlist(P6050, 6, 7, 8)   // excluye servicio doméstico, pensionistas y trabajadores
+gen miembro = !inlist(P6050, 6, 7, 8) // excluye servicio doméstico, pensionistas y trabajadores
 
-label var trimestre     "Trimestre (1=ene-mar, 2=abr-jun)"
+label var trimestre "Trimestre (1=ene-mar, 2=abr-jun)"
 label var form_reducido "Formulario telefónico reducido (cabecera, mar-jun)"
 
 * montos: 98 = no sabe, 99 = no informa
@@ -194,13 +194,13 @@ drop ing_lab
 
 * Household income y per capita
 gen ing_ind_m = ing_ind if miembro
-bysort mes_n DIRECTORIO SECUENCIA_P: egen ing_hogar  = total(ing_ind_m), missing
+bysort mes_n DIRECTORIO SECUENCIA_P: egen ing_hogar = total(ing_ind_m), missing
 bysort mes_n DIRECTORIO SECUENCIA_P: egen n_miembros = total(miembro)
 gen ing_pc = ing_hogar / n_miembros
 drop ing_ind_m
 
 * Deciles (ponderados, dentro de cada trimestre)
-gen dec_ing   = .
+gen dec_ing = .
 gen dec_ingpc = .
 forvalues t = 1/2 {
     qui count if trimestre == `t' & P6050 == 1 & !missing(ing_hogar)
@@ -221,29 +221,29 @@ drop tmp
 * Horas
 *------------------------------------------------------------------------------
 gen hrs_ppal = P6800 if ocu
-gen hrs_sec  = P7045 if ocu & P7040 == 1
+gen hrs_sec = P7045 if ocu & P7040 == 1
 replace hrs_sec = 0 if ocu & P7040 == 2
 
 *------------------------------------------------------------------------------
 * Salud
 *------------------------------------------------------------------------------
-gen salud_publica = (P6100 == 3) if inlist(P6090, 1, 2)   // régimen subsidiado
-gen sin_salud     = (P6090 == 2) if inlist(P6090, 1, 2)
+gen salud_publica = (P6100 == 3) if inlist(P6090, 1, 2) // régimen subsidiado
+gen sin_salud = (P6090 == 2) if inlist(P6090, 1, 2)
 
 *------------------------------------------------------------------------------
 * Empleo, horas deseadas y búsqueda (universo: ocupados)
 *------------------------------------------------------------------------------
-gen un_empleo           = (P7040 == 2) if ocu & inlist(P7040, 1, 2)
-gen multi_empleo        = (P7040 == 1) if ocu & inlist(P7040, 1, 2)
-gen quiere_mas_hrs      = (P7090 == 1) if ocu & inlist(P7090, 1, 2)
+gen un_empleo = (P7040 == 2) if ocu & inlist(P7040, 1, 2)
+gen multi_empleo = (P7040 == 1) if ocu & inlist(P7040, 1, 2)
+gen quiere_mas_hrs = (P7090 == 1) if ocu & inlist(P7090, 1, 2)
 gen quiere_disp_mas_hrs = (P7090 == 1 & P7120 == 1) if ocu & inlist(P7090, 1, 2)
-gen busca_mas_hrs       = (P7090 == 1 & P7110 == 1) if ocu & inlist(P7090, 1, 2)
-gen busca_otro_empleo   = (P7150 == 1) if ocu & inlist(P7130, 1, 2)
+gen busca_mas_hrs = (P7090 == 1 & P7110 == 1) if ocu & inlist(P7090, 1, 2)
+gen busca_otro_empleo = (P7150 == 1) if ocu & inlist(P7130, 1, 2)
 
 * Subempleo por insuficiencia de horas: quiere y puede trabajar más, y
 * trabaja normalmente menos de 48 horas en total (umbral del DANE)
 gen hrs_tot = hrs_ppal + hrs_sec
-gen subempleado  = (P7090 == 1 & P7120 == 1 & hrs_tot < 48) ///
+gen subempleado = (P7090 == 1 & P7120 == 1 & hrs_tot < 48) ///
                    if ocu & inlist(P7090, 1, 2) & !missing(hrs_tot)
 gen pleno_empleo = 1 - subempleado
 drop hrs_tot
@@ -251,68 +251,68 @@ drop hrs_tot
 *------------------------------------------------------------------------------
 * Sector y lugar de trabajo (universo: ocupados)
 *------------------------------------------------------------------------------
-gen sector_publico     = (P6430 == 2) if ocu & !missing(P6430)
-gen sector_privado     = (P6430 == 1) if ocu & !missing(P6430)
+gen sector_publico = (P6430 == 2) if ocu & !missing(P6430)
+gen sector_privado = (P6430 == 1) if ocu & !missing(P6430)
 gen servicio_domestico = (P6430 == 3) if ocu & !missing(P6430)
 
-gen lugar_oficina_negocio_finca = inlist(P6880, 7, 8)    if ocu & inrange(P6880, 1, 11)
-gen lugar_casa_cliente          = (P6880 == 2)           if ocu & inrange(P6880, 1, 11)
-gen lugar_calle_movil           = inlist(P6880, 4, 5, 6) if ocu & inrange(P6880, 1, 11)
+gen lugar_oficina_negocio_finca = inlist(P6880, 7, 8) if ocu & inrange(P6880, 1, 11)
+gen lugar_casa_cliente = (P6880 == 2) if ocu & inrange(P6880, 1, 11)
+gen lugar_calle_movil = inlist(P6880, 4, 5, 6) if ocu & inrange(P6880, 1, 11)
 
 *------------------------------------------------------------------------------
 * Antigüedad (meses continuos en la empresa, universo: ocupados)
 *------------------------------------------------------------------------------
-gen antig_1a5  = inrange(P6426, 12, 60) if ocu & !missing(P6426)
-gen antig_mas5 = (P6426 > 60)           if ocu & !missing(P6426)
+gen antig_1a5 = inrange(P6426, 12, 60) if ocu & !missing(P6426)
+gen antig_mas5 = (P6426 > 60) if ocu & !missing(P6426)
 
 *------------------------------------------------------------------------------
 * Beneficios (universo: asalariados, salvo salud y pensión: ocupados)
 *------------------------------------------------------------------------------
-gen contrato_indef = (P6440 == 1 & P6460 == 1)   if asal & inlist(P6440, 1, 2)
-gen comida         = (P6590 == 1)                if asal & inlist(P6590, 1, 2, 9)
-gen vacaciones     = (P6440 == 1 & P6424S1 == 1) if asal & inlist(P6440, 1, 2)
-gen prima_navidad  = (P6440 == 1 & P6424S2 == 1) if asal & inlist(P6440, 1, 2)
+gen contrato_indef = (P6440 == 1 & P6460 == 1) if asal & inlist(P6440, 1, 2)
+gen comida = (P6590 == 1) if asal & inlist(P6590, 1, 2, 9)
+gen vacaciones = (P6440 == 1 & P6424S1 == 1) if asal & inlist(P6440, 1, 2)
+gen prima_navidad = (P6440 == 1 & P6424S2 == 1) if asal & inlist(P6440, 1, 2)
 gen salud_por_trabajo = (P6100 == 1 & inlist(P6110, 1, 4)) if ocu & inlist(P6090, 1, 2)
-gen aporte_pension    = (P6920 == 1) if ocu & inlist(P6920, 1, 2, 3)
+gen aporte_pension = (P6920 == 1) if ocu & inlist(P6920, 1, 2, 3)
 
 *------------------------------------------------------------------------------
 * Etiquetas (nombres de la lista de la cátedra)
 *------------------------------------------------------------------------------
-label var ing_hogar            "Household income"
-label var ing_pc               "Per capita family income"
-label var dec_ing              "Decile income"
-label var dec_ingpc            "Decile pc income"
-label var hrs_ppal             "Week hours main job"
-label var hrs_sec              "Week hours other job"
-label var ing_ind              "Total individual income"
-label var ing_sec              "Other job income"
-label var ing_ppal             "Main job income"
-label var extras_sal           "Monthly wage extras"
-label var ing_nolab            "Total non work income"
-label var salud_publica        "Public health coverage"
-label var sin_salud            "No health coverage"
-label var un_empleo            "One job"
-label var multi_empleo         "More than one job"
-label var quiere_mas_hrs       "Want work more"
-label var quiere_disp_mas_hrs  "Want can work more"
-label var busca_mas_hrs        "Search + hrs to work last month"
-label var busca_otro_empleo    "Search another job"
-label var subempleado          "Under employed"
-label var pleno_empleo         "Full employed"
-label var sector_publico       "Public sector job"
-label var sector_privado       "Private sector job"
-label var servicio_domestico   "Domestic employee"
+label var ing_hogar "Household income"
+label var ing_pc "Per capita family income"
+label var dec_ing "Decile income"
+label var dec_ingpc "Decile pc income"
+label var hrs_ppal "Week hours main job"
+label var hrs_sec "Week hours other job"
+label var ing_ind "Total individual income"
+label var ing_sec "Other job income"
+label var ing_ppal "Main job income"
+label var extras_sal "Monthly wage extras"
+label var ing_nolab "Total non work income"
+label var salud_publica "Public health coverage"
+label var sin_salud "No health coverage"
+label var un_empleo "One job"
+label var multi_empleo "More than one job"
+label var quiere_mas_hrs "Want work more"
+label var quiere_disp_mas_hrs "Want can work more"
+label var busca_mas_hrs "Search + hrs to work last month"
+label var busca_otro_empleo "Search another job"
+label var subempleado "Under employed"
+label var pleno_empleo "Full employed"
+label var sector_publico "Public sector job"
+label var sector_privado "Private sector job"
+label var servicio_domestico "Domestic employee"
 label var lugar_oficina_negocio_finca "Office business farm employee"
-label var lugar_casa_cliente   "At customers home"
-label var lugar_calle_movil    "Street mobile employee"
-label var antig_1a5            "One to five years continous work"
-label var antig_mas5           "More five years continuous work"
-label var contrato_indef       "Fixed employment"
-label var comida               "Free meal"
-label var vacaciones           "Paid holidays"
-label var prima_navidad        "Thirteenth month"
-label var salud_por_trabajo    "Medical insurance from work"
-label var aporte_pension       "Pension discount"
+label var lugar_casa_cliente "At customers home"
+label var lugar_calle_movil "Street mobile employee"
+label var antig_1a5 "One to five years continous work"
+label var antig_mas5 "More five years continuous work"
+label var contrato_indef "Fixed employment"
+label var comida "Free meal"
+label var vacaciones "Paid holidays"
+label var prima_navidad "Thirteenth month"
+label var salud_por_trabajo "Medical insurance from work"
+label var aporte_pension "Pension discount"
 
 local vars ing_hogar ing_pc dec_ing dec_ingpc hrs_ppal hrs_sec ing_ind ing_sec ///
     ing_ppal extras_sal ing_nolab salud_publica sin_salud un_empleo multi_empleo ///
@@ -336,10 +336,10 @@ save "$root/geih_colombia_2020_q1q2.dta", replace
 
 *==============================================================================
 * 3. Estructura de panel: ¿se pueden seguir hogares entre meses?
-*    Según la metodología del DANE, la GEIH rota segmentos y no es un panel.
-*    Resultado: 337 DIRECTORIO aparecen en dos meses (marzo-mayo y abril-mayo),
-*    pero no son las mismas personas: el sexo coincide ~50% de las veces, la
-*    edad (0 o 1 año de diferencia) ~3% y el área ~5%.
+* Según la metodología del DANE, la GEIH rota segmentos y no es un panel.
+* Resultado: 337 DIRECTORIO aparecen en dos meses (marzo-mayo y abril-mayo),
+* pero no son las mismas personas: el sexo coincide ~50% de las veces, la
+* edad (0 o 1 año de diferencia) ~3% y el área ~5%.
 *==============================================================================
 use "$root/geih_colombia_2020_q1q2.dta", clear
 
@@ -371,7 +371,7 @@ foreach par in "3 5" "4 5" {
     merge 1:1 DIRECTORIO SECUENCIA_P ORDEN using `mb', keep(match) nogen
     di as result _n "Mes `a' vs mes `b': " _N " personas con el mismo identificador"
     gen mismo_sexo = P6020 == sexo_b
-    gen edad_ok    = inlist(edad_b - P6040, 0, 1)
+    gen edad_ok = inlist(edad_b - P6040, 0, 1)
     gen misma_area = AREA == area_b
     sum mismo_sexo edad_ok misma_area
     restore
